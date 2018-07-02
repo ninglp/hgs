@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>贪吃蛇</title>
+</head>
+<body>
+  <canvas id="canvas " width="500" height="500" style="background-color: #222;"></canvas>
+  <audio id='eat' src="media/eat.mp3"></audio>
+  <audio id='fail' src="media/fail.mp3"></audio>
+<script>
+window.onload = function (){
+  var eat=document.getElementById('eat');
+  var fail=document.getElementById('fail');
+  var canvas = document.getElementById('canvas ');
+  var ctx = canvas.getContext('2d');
+  var CELL = 10; // 格子大小
+  var SPEED = 200; // 时间间隔
+  var dir = 37; // 方向 左37  上38  右39  下40
+  var apple={},snake; // 苹果
+  var timer = null;// 计时器
+  var status=true; // 游戏状态
+
+  begin();
+  // 初始化
+  function init(){
+    status=true;
+    // 随机生成初始方向
+    dir=roll(37,40);
+    // 生成蛇
+    creatSnake();
+    // 生成苹果
+    spawn();
+  }
+
+  // 控制器
+  function control(){
+    if(!status && timer){
+      clearInterval(timer); 
+      timer=null;     
+      fail.play();
+      end();
+    }else if(!timer){
+      init();
+      timer = setInterval(main,SPEED);
+    }
+  }
+  // 生成蛇位置
+  function creatSnake(){
+    // 根据方向生成蛇位置 不要太靠近边界
+    snake=[{x:roll(10,40),y:roll(10,40)}];
+    switch(dir){
+      case 37:
+      snake.push({x:snake[0].x+1,y:snake[0].y})
+      break;
+      case 38:
+      snake.push({x:snake[0].x,y:snake[0].y+1})
+      break;     
+      case 39:
+      snake.push({x:snake[0].x-1,y:snake[0].y})
+      break; 
+      case 40:
+      snake.push({x:snake[0].x,y:snake[0].y-1})
+      break;
+    }
+  }
+  // 主循环
+  function main(){
+    // 判定 边界碰撞
+    if(snake[0].x<0 || snake[0].x>=50 || snake[0].y<0 || snake[0].y>=50){
+        status=false;
+    }
+    // 清空画布
+    ctx.clearRect(0,0,500,500);
+    // 判定蛇和苹果碰撞
+    if((dir==37 && snake[0].x-1==apple.x && snake[0].y==apple.y)||
+      (dir==38 && snake[0].x==apple.x && snake[0].y-1==apple.y) ||
+      (dir==39 && snake[0].x+1==apple.x && snake[0].y==apple.y) ||
+      (dir==40 && snake[0].x==apple.x && snake[0].y+1==apple.y)){
+        // 把苹果坐标加入蛇
+        snake.unshift({x:apple.x,y:apple.y});
+        eat.play();
+        apple.exist=false;
+      }
+    // 判断蛇自己碰撞
+    snake.forEach(function (item,index){
+      if(index != 0 && snake[0].x==item.x && snake[0].y==item.y){
+        status=false;
+      }
+    });
+    // 判断状态
+    if(!status){
+      control();
+      return
+    }
+    //蛇身移动逻辑 尾部移动到首位 再根据方向和原首位改正首位坐标
+    snake.unshift(snake.pop());
+    switch(dir){
+      case 37:
+        snake[0].x = snake[1].x - 1;
+        snake[0].y = snake[1].y;
+      break;
+      case 38:
+        snake[0].x = snake[1].x;
+        snake[0].y = snake[1].y - 1;
+      break;
+      case 39:
+        snake[0].x = snake[1].x + 1;
+        snake[0].y = snake[1].y;        
+      break;
+      case 40:
+        snake[0].x = snake[1].x;
+        snake[0].y = snake[1].y + 1;
+      break;
+    }
+    // 蛇身颜色
+    ctx.fillStyle = "#99CC00";
+    // 遍历绘制蛇身
+    for(var i=0;i < snake.length; i++){
+      ctx.fillRect (snake[i].x*CELL, snake[i].y*CELL, CELL, CELL);
+    }
+    // 判断是否生成苹果
+    if(!apple.exist){
+      spawn();
+    }
+	// 苹果颜色
+    ctx.fillStyle="#FF0033";
+    ctx.fillRect(apple.x*CELL,apple.y*CELL,CELL,CELL);
+  }
+
+  // 随机生成苹果
+  function spawn(){
+    apple.x=roll(1,45);
+    apple.y=roll(1,45);
+    apple.exist=true;
+    console.log(apple)
+  }
+    // 随机范围取值
+  function roll(Min,Max){
+      var Range = Max - Min;
+      var Rand = Math.random();
+      var num = Min + Math.round(Rand * Range); 
+      return num;
+  }
+  function begin(){
+    ctx.font = "italic 35px 黑体";
+		ctx.fillStyle = "#fff";
+		ctx.fillText("贪吃蛇",180,60,200);    
+    ctx.fillText("按空格开始",150,100,200);
+    ctx.fillText("方向键控制",150,140,200);
+  }
+  // 游戏结束
+  function end(){
+    ctx.font = "italic 35px 黑体";
+		ctx.fillStyle = "#fff";
+		ctx.fillText("游戏结束",150,60,200);
+    ctx.fillText("得分："+(snake.length-2),160,100,200);
+    ctx.fillText("按空格重新开始",140,140,200);
+  }
+  // 监听按键
+  document.onkeydown = function (e){
+    if(e.keyCode != dir && Math.abs(e.keyCode - dir) != 2 && e.keyCode < 41 && e.keyCode > 36){
+      dir = e.keyCode;
+    }else if(e.keyCode == 32){
+      control()
+    }
+  }
+}
+</script>
+</body>
+</html>
